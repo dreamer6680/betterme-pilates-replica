@@ -13,7 +13,7 @@ export const healthProfileSchema = z
   .object({
     sex: z.enum(["FEMALE", "MALE", "OTHER"]),
     age: finiteNumber.int().min(18).max(100),
-    heightCm: finiteNumber.min(120).max(230),
+    heightCm: finiteNumber.min(90).max(243),
     weightKg: finiteNumber.min(35).max(300),
     targetWeightKg: finiteNumber.min(35).max(300),
     activityLevel: z.enum([

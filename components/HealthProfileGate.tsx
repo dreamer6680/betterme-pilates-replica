@@ -170,7 +170,11 @@ export default function HealthProfileGate({ flow, order, age }: HealthProfileGat
   }, [order, router]);
 
   useEffect(() => {
-    void loadSession();
+    const restoreId = window.setTimeout(() => {
+      void loadSession();
+    }, 0);
+
+    return () => window.clearTimeout(restoreId);
   }, [loadSession]);
 
   useEffect(() => {

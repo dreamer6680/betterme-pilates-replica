@@ -16,7 +16,7 @@ test("walks the explicit route funnel, restores from backend, and unlocks via mo
   await expect(page).toHaveURL(/\/onboarding\/limitations\?/);
 
   await page.getByRole("button", { name: "Sensitive knees" }).click();
-  await page.getByRole("button", { name: "NEXT" }).click();
+  await page.getByRole("button", { name: "NEXT", exact: true }).click();
   await page.getByRole("button", { name: "3-4 times a week" }).click();
 
   await page.getByRole("button", { name: "No, never tried it" }).click();
@@ -42,11 +42,11 @@ test("walks the explicit route funnel, restores from backend, and unlocks via mo
   await page.getByRole("button", { name: /Mediterranean/ }).click();
 
   await page.getByRole("button", { name: "I have a sweet tooth" }).click();
-  await page.getByRole("button", { name: "NEXT" }).click();
+  await page.getByRole("button", { name: "NEXT", exact: true }).click();
   await page.getByRole("button", { name: "CONTINUE" }).click();
 
   await page.getByRole("button", { name: "Stress or worry" }).click();
-  await page.getByRole("button", { name: "NEXT" }).click();
+  await page.getByRole("button", { name: "NEXT", exact: true }).click();
   await page.getByRole("button", { name: "Female" }).click();
 
   await expect(page).toHaveURL(/\/onboarding\/height\?/);

@@ -133,12 +133,25 @@
   opacity: 0.58;
 }
 
-.error {
-  margin-top: 18px;
+.error,
+.floatingError {
   padding: 12px 14px;
   border-radius: 12px;
   background: #fff0ec;
   color: #8f321f;
+}
+
+.error {
+  margin-top: 18px;
+}
+
+.floatingError {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 50;
+  max-width: min(420px, calc(100vw - 40px));
+  box-shadow: 0 14px 40px rgba(74, 46, 34, 0.14);
 }
 
 .note {

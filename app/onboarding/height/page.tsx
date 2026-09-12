@@ -34,8 +34,8 @@ function HeightContent() {
     setSaving(true);
     setError("");
     try {
-      await saveExplicitPageState(sessionId, { stepKey: "heightCm", value: canonicalCm, nextStepKey: "heightDisplayUnit" });
-      await saveExplicitPageState(sessionId, { stepKey: "heightDisplayUnit", value: unit, nextStepKey: "healthConsent" });
+      await saveExplicitPageState(sessionId, { stepKey: "heightCm", value: canonicalCm, nextStepKey: "heightCm" });
+      await saveExplicitPageState(sessionId, { stepKey: "heightDisplayUnit", value: unit, nextStepKey: "heightCm" });
       await saveExplicitPageState(sessionId, {
         stepKey: "healthConsent",
         value: { accepted: true, version: "2026-09-12", acceptedAt: new Date().toISOString() },

@@ -56,14 +56,14 @@ describe("getResultForVisitor", () => {
     expect(response.result).toMatchObject({
       bmi: expect.any(Number),
       bmiCategory: expect.any(String),
-      targetDate: expect.any(String),
     });
+    expect(response.result).not.toHaveProperty("targetDate");
     expect(response.result).not.toHaveProperty("predictionCurve");
     expect(response.result).not.toHaveProperty("recommendedCalories");
     expect(response.result).not.toHaveProperty("bmr");
     expect(response.result).not.toHaveProperty("tdee");
     expect(response).toMatchObject({
-      locked: ["predictionCurve", "recommendedCalories", "weeklyPlan"],
+      locked: ["targetDate", "predictionCurve", "recommendedCalories", "weeklyPlan"],
     });
   });
 
@@ -87,6 +87,7 @@ describe("getResultForVisitor", () => {
       recommendedCalories: expect.any(Number),
       bmr: expect.any(Number),
       tdee: expect.any(Number),
+      targetDate: expect.any(String),
       predictionCurve: expect.any(Array),
     });
   });
@@ -105,6 +106,7 @@ describe("getResultForVisitor", () => {
 
     const response = await getResultForVisitor(visitor.id, session.id, NOW);
     expect(response.access).toBe("preview");
+    expect(response.result).not.toHaveProperty("targetDate");
   });
 
   it("rejects another visitor's result", async () => {

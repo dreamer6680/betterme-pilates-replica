@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import OnboardingQuestionnaire from "@/components/OnboardingQuestionnaire";
+import HealthProfileGate from "@/components/HealthProfileGate";
 import styles from "@/components/onboarding.module.css";
 import { PILATES_CONFIG } from "@/lib/config";
 import { isValidOrderId } from "@/lib/onboarding";
@@ -14,15 +14,11 @@ type OnboardingPageProps = {
   }>;
 };
 
-function firstString(
-  value: string | string[] | undefined,
-): string {
+function firstString(value: string | string[] | undefined): string {
   return typeof value === "string" ? value : "";
 }
 
-export default async function OnboardingPage({
-  searchParams,
-}: OnboardingPageProps) {
+export default async function OnboardingPage({ searchParams }: OnboardingPageProps) {
   const params = await searchParams;
 
   const flow = firstString(params.flow);
@@ -41,15 +37,12 @@ export default async function OnboardingPage({
           <span aria-hidden="true">↻</span>
           <h1>Let&apos;s restart your setup</h1>
           <p>
-            This questionnaire link is incomplete or no longer valid.
-            Choose your age again to start a fresh local session.
+            This questionnaire link is incomplete or no longer valid. Choose your age again to start a fresh local session.
           </p>
 
           <Link
             className={styles.restartLink}
-            href={`/first-page-brand-palette?flow=${encodeURIComponent(
-              PILATES_CONFIG.flow,
-            )}`}
+            href={`/first-page-brand-palette?flow=${encodeURIComponent(PILATES_CONFIG.flow)}`}
           >
             CHOOSE YOUR AGE
           </Link>
@@ -58,11 +51,5 @@ export default async function OnboardingPage({
     );
   }
 
-  return (
-    <OnboardingQuestionnaire
-      flow={flow}
-      order={order}
-      age={age}
-    />
-  );
+  return <HealthProfileGate flow={flow} order={order} age={age} />;
 }

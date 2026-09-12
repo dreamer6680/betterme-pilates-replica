@@ -9,7 +9,6 @@ type PreviewResult = {
   result: {
     bmi: number;
     bmiCategory: string;
-    targetDate: string;
   };
   locked: readonly string[];
 };
@@ -182,9 +181,7 @@ export default function HealthResult({ sessionId }: HealthResultProps) {
       <section className={styles.hero}>
         <p className={styles.eyebrow}>Personalized assessment</p>
         <h1>Your Home Pilates roadmap is ready.</h1>
-        <p>
-          Based on the profile and activity answers saved in this assessment session.
-        </p>
+        <p>Based on the profile and activity answers saved in this assessment session.</p>
       </section>
 
       <section className={styles.metrics}>
@@ -193,11 +190,19 @@ export default function HealthResult({ sessionId }: HealthResultProps) {
           <strong>{payload.result.bmi.toFixed(1)}</strong>
           <small>{payload.result.bmiCategory}</small>
         </article>
-        <article>
-          <span>Target planning date</span>
-          <strong>{formatDate(payload.result.targetDate)}</strong>
-          <small>Educational estimate</small>
-        </article>
+        {payload.access === "full" ? (
+          <article>
+            <span>Target planning date</span>
+            <strong>{formatDate(payload.result.targetDate)}</strong>
+            <small>Educational estimate</small>
+          </article>
+        ) : (
+          <article className={styles.lockedMetric}>
+            <span>Target planning date</span>
+            <strong>••••</strong>
+            <small>Unlock to view</small>
+          </article>
+        )}
         {payload.access === "full" ? (
           <article>
             <span>Daily calorie estimate</span>
@@ -255,10 +260,8 @@ export default function HealthResult({ sessionId }: HealthResultProps) {
         <section className={styles.paywall}>
           <div>
             <p className={styles.eyebrow}>Unlock your plan</p>
-            <h2>See the full projection and calorie target.</h2>
-            <p>
-              This take-home demo uses a simulated payment endpoint. No real charge is made.
-            </p>
+            <h2>See the full projection, target date, and calorie target.</h2>
+            <p>This take-home demo uses a simulated payment endpoint. No real charge is made.</p>
           </div>
           <div className={styles.plans}>
             <button type="button" disabled={paying} onClick={() => void unlock("monthly")}>
@@ -272,9 +275,7 @@ export default function HealthResult({ sessionId }: HealthResultProps) {
       )}
 
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
-      <p className={styles.disclaimer}>
-        BMI, energy expenditure, calories, and target dates here are educational demo estimates and are not medical advice.
-      </p>
+      <p className={styles.disclaimer}>BMI, energy expenditure, calories, and target dates here are educational demo estimates and are not medical advice.</p>
     </main>
   );
 }

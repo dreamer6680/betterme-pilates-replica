@@ -61,21 +61,23 @@ model Visitor {
 }
 
 model AssessmentSession {
-  id          String             @id @default(uuid()) @db.Uuid
-  visitorId   String             @db.Uuid
-  visitor     Visitor            @relation(fields: [visitorId], references: [id], onDelete: Cascade)
-  flow        String
-  ageRange    String?
-  currentStep Int                @default(0)
-  status      AssessmentStatus   @default(DRAFT)
-  version     Int                @default(0)
-  completedAt DateTime?
-  answers     AssessmentAnswer[]
-  profile     HealthProfile?
-  result      AssessmentResult?
-  payments    PaymentEvent[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id             String             @id @default(uuid()) @db.Uuid
+  visitorId      String             @db.Uuid
+  visitor        Visitor            @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  flow           String
+  flowRevision   String             @default("home-pilates-explicit-pages-v1")
+  ageRange       String?
+  currentStep    Int                @default(0)
+  currentStepKey String?
+  status         AssessmentStatus   @default(DRAFT)
+  version        Int                @default(0)
+  completedAt    DateTime?
+  answers        AssessmentAnswer[]
+  profile        HealthProfile?
+  result         AssessmentResult?
+  payments       PaymentEvent[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   @@index([visitorId])
   @@index([visitorId, status])

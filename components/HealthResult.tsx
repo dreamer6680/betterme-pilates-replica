@@ -107,7 +107,11 @@ export default function HealthResult({ sessionId }: HealthResultProps) {
   }, [sessionId]);
 
   useEffect(() => {
-    void loadResult();
+    const loadId = window.setTimeout(() => {
+      void loadResult();
+    }, 0);
+
+    return () => window.clearTimeout(loadId);
   }, [loadResult]);
 
   const unlock = useCallback(

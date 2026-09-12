@@ -6,13 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { saveExplicitPageState } from "@/components/funnel/clientState";
 import styles from "./checkout.module.css";
 
-type Offer = "trial" | "four-week" | "twelve-week";
+type Offer = "trial" | "four-week-discount" | "four-week-popular" | "twelve-week";
 
 function CheckoutContent() {
   const router = useRouter();
   const params = useSearchParams();
   const sessionId = params.get("sessionId") || params.get("order") || "";
-  const [selected, setSelected] = useState<Offer>("four-week");
+  const [selected, setSelected] = useState<Offer>("four-week-popular");
   const [modalOpen, setModalOpen] = useState(false);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
@@ -27,7 +27,7 @@ function CheckoutContent() {
         nextStepKey: "paymentModal",
       });
     } catch {
-      // The modal is still inspectable if persistence is temporarily unavailable.
+      // The modal remains inspectable if persistence is temporarily unavailable.
     }
     setModalOpen(true);
   }
@@ -65,6 +65,13 @@ function CheckoutContent() {
     }
   }
 
+  function selectedSummary() {
+    if (selected === "twelve-week") return "12-Week Plan · HK$588";
+    if (selected === "four-week-popular") return "4-Week Plan · HK$280";
+    if (selected === "four-week-discount") return "4-week PLAN · HK$98";
+    return "1-Week Trial";
+  }
+
   return (
     <main className={styles.page} data-step-key="checkout">
       <header className={styles.header}>
@@ -92,16 +99,20 @@ function CheckoutContent() {
               <span className={styles.badge}>TRIAL</span><h3>1-Week Trial</h3><p>Demo offer card</p><strong>Reference-inspired trial option</strong>
               <button className={styles.primary} type="button" onClick={() => void openCheckout("trial")}>GET MY PLAN</button>
             </article>
-            <article className={`${styles.card} ${selected === "four-week" ? styles.cardSelected : ""}`} onClick={() => setSelected("four-week")}>
-              <span className={styles.badge}>30% OFF</span><h3>4-week PLAN</h3><p><s>HK$140</s> <strong>HK$98</strong></p><p>HK$14/day</p>
-              <button className={styles.primary} type="button" onClick={() => void openCheckout("four-week")}>GET MY PLAN</button>
+            <article className={`${styles.card} ${selected === "four-week-discount" ? styles.cardSelected : ""}`} onClick={() => setSelected("four-week-discount")}>
+              <span className={styles.badge}>30% OFF</span><h3>4-week PLAN</h3><p><strong>HK$98</strong></p><p>HK$14/day</p>
+              <button className={styles.primary} type="button" onClick={() => void openCheckout("four-week-discount")}>GET MY PLAN</button>
+            </article>
+            <article className={`${styles.card} ${selected === "four-week-popular" ? styles.cardSelected : ""}`} onClick={() => setSelected("four-week-popular")}>
+              <span className={styles.badge}>MOST POPULAR</span><h3>4-Week Plan</h3><p><strong>HK$280</strong></p><p>HK$10/day</p>
+              <button className={styles.primary} type="button" onClick={() => void openCheckout("four-week-popular")}>GET MY PLAN</button>
             </article>
             <article className={`${styles.card} ${selected === "twelve-week" ? styles.cardSelected : ""}`} onClick={() => setSelected("twelve-week")}>
-              <span className={styles.badge}>MOST POPULAR</span><h3>12-Week Plan</h3><p><strong>HK$588</strong></p><p>HK$7/day</p>
+              <span className={styles.badge}>12 WEEKS</span><h3>12-Week Plan</h3><p><strong>HK$588</strong></p><p>HK$7/day</p>
               <button className={styles.primary} type="button" onClick={() => void openCheckout("twelve-week")}>GET MY PLAN</button>
             </article>
           </div>
-          <p>Observed pricing is reproduced for page-fidelity demonstration only. The mock endpoint activates a test subscription and never charges money.</p>
+          <p>The supplied observation calls these “three plan choices” while listing four distinct offer/price rows. This replica exposes every observed row rather than silently dropping one. Prices are display-only; the mock endpoint never charges money.</p>
         </section>
 
         <section className={styles.section}>
@@ -145,7 +156,8 @@ function CheckoutContent() {
           <h2>Ready to start?</h2>
           <div className={styles.grid}>
             <article className={styles.card}><h3>1-Week Trial</h3><button className={styles.primary} type="button" onClick={() => void openCheckout("trial")}>GET MY PLAN</button></article>
-            <article className={styles.card}><h3>4-week PLAN · HK$98</h3><button className={styles.primary} type="button" onClick={() => void openCheckout("four-week")}>GET MY PLAN</button></article>
+            <article className={styles.card}><h3>4-week PLAN · HK$98</h3><button className={styles.primary} type="button" onClick={() => void openCheckout("four-week-discount")}>GET MY PLAN</button></article>
+            <article className={styles.card}><h3>4-Week Plan · HK$280</h3><button className={styles.primary} type="button" onClick={() => void openCheckout("four-week-popular")}>GET MY PLAN</button></article>
             <article className={styles.card}><h3>12-Week Plan · HK$588</h3><button className={styles.primary} type="button" onClick={() => void openCheckout("twelve-week")}>GET MY PLAN</button></article>
           </div>
         </section>
@@ -165,7 +177,7 @@ function CheckoutContent() {
             </div>
             <div className={styles.card}>
               <strong>Order summary</strong>
-              <p>{selected === "twelve-week" ? "12-Week Plan · HK$588" : selected === "four-week" ? "4-week PLAN · HK$98" : "1-Week Trial"}</p>
+              <p>{selectedSummary()}</p>
               <p>Promo: demo_sep26</p>
             </div>
             <p>VISA · Mastercard · AmEx</p>

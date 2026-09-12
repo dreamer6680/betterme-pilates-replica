@@ -37,15 +37,9 @@ export async function PATCH(request: Request, context: RouteContext) {
       },
     );
 
-    return NextResponse.json(
-      {
-        saved: true,
-        currentStep: session.currentStep,
-        version: session.version,
-        answers: session.answers,
-      },
-      { headers: { "Cache-Control": "no-store" } },
-    );
+    return NextResponse.json(session, {
+      headers: { "Cache-Control": "no-store" },
+    });
   } catch (error) {
     const payload = toErrorPayload(error);
     return NextResponse.json(payload.body, { status: payload.status });

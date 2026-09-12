@@ -1,44 +1,124 @@
-# BetterMe Pilates First Page Replica
+# BetterMe-Inspired Home Pilates Assessment
 
-A local-only Next.js reproduction of the observed BetterMe Pilates first page.
+A full-stack Next.js take-home implementation inspired by the public BetterMe Home Pilates quiz funnel. It implements persisted anonymous assessment sessions, explicit per-URL funnel pages, health calculations, preview/full result access, a simulated subscription payment, automated tests, and browser E2E coverage.
 
-The application reproduces the first age-selection screen and its responsive desktop/mobile layout while intentionally replacing upstream mutations, analytics, and questionnaire infrastructure with local Next.js route handlers.
+> Independent educational replica. It does not proxy private BetterMe APIs, process real payments, or provide medical advice.
 
-## Technology
+## Stack
 
-- Next.js 16 App Router
-- React 19
-- TypeScript
-- Plain global CSS
-- Next.js route handlers
-- Vitest
-- React Testing Library
-- No database
-- No authentication
-- No analytics
-- No external backend
+- Next.js 16 App Router + React 19 + TypeScript
+- Prisma ORM + PostgreSQL 16
+- Docker Compose for PostgreSQL
+- Zod validation
+- Vitest + React Testing Library
+- Playwright
+- GitHub Actions
+- Plain CSS modules/global CSS
 
-## Requirements
+## Core flow
 
-Node.js 20.9 or newer is recommended.
+```text
+Age selection
+  -> anonymous Visitor + AssessmentSession
+  -> explicit page.tsx routes save answers step-by-step
+  -> body/health data collected near the end of the questionnaire
+  -> analysis / conversion pages
+  -> checkout
+  -> server-side completion/health calculation
+  -> preview result (locked fields physically omitted)
+  -> mock /pay subscription activation
+  -> full result
+```
 
-## Setup
+The browser receives an HTTP-only anonymous visitor cookie. The public session UUID is used to resume the assessment, but every session/result/payment operation also verifies visitor ownership on the server.
+
+The observed funnel is implemented as separate App Router files such as:
+
+```text
+app/onboarding/stairs/page.tsx
+app/onboarding/limitations/page.tsx
+app/onboarding/accessories-experience/page.tsx
+...
+app/onboarding/height/page.tsx
+app/onboarding/weight/page.tsx
+app/onboarding/target-weight/page.tsx
+app/onboarding/age/page.tsx
+...
+app/funnel-prompts/page.tsx
+app/progress-graph/default/page.tsx
+app/country-change/page.tsx
+app/scratch-card/page.tsx
+app/checkout/reason-to-believe/page.tsx
+```
+
+Visible copy, choices, route-specific branching, and destination URLs live directly in each page file rather than being generated from a central step configuration.
+
+## Quick start with Docker PostgreSQL
+
+Requirements:
+
+- Node.js 20.9+
+- Docker with Docker Compose
+
+Start PostgreSQL:
 
 ```bash
+docker compose up -d
+```
+
+The Compose service starts `postgres:16-alpine` with:
+
+```text
+host: localhost
+port: 5432
+database: betterme
+user: postgres
+password: postgres
+```
+
+Create the application environment and initialize Prisma:
+
+```bash
+cp .env.example .env
 npm install
+npm run db:generate
+npm run db:deploy
 npm run dev
+```
+
+Default development connection:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/betterme"
+VISITOR_COOKIE_NAME="betterme_visitor"
+NODE_ENV=development
 ```
 
 Open:
 
 ```text
-http://localhost:3000
+http://localhost:3000/first-page-brand-palette?flow=2117
 ```
 
-The root URL redirects to:
+Check the database container:
 
-```text
-/first-page-brand-palette?flow=2117
+```bash
+docker compose ps
+docker compose logs postgres
+```
+
+Stop the database while preserving data:
+
+```bash
+docker compose down
+```
+
+Delete the local database volume and start clean:
+
+```bash
+docker compose down -v
+docker compose up -d
+npm run db:deploy
 ```
 
 ## Scripts
@@ -49,341 +129,378 @@ npm run build
 npm run start
 npm run lint
 npm run typecheck
-npm run test
+npm test
 npm run test:watch
+npm run test:e2e
+npm run db:generate
+npm run db:deploy
 ```
 
-## Routes
+## Persistence model
 
-### `/`
+```mermaid
+erDiagram
+    Visitor ||--o{ AssessmentSession : owns
+    Visitor ||--o{ Subscription : has
+    Visitor ||--o{ PaymentEvent : creates
+    AssessmentSession ||--o{ AssessmentAnswer : contains
+    AssessmentSession ||--o| HealthProfile : produces
+    AssessmentSession ||--o| AssessmentResult : produces
+    AssessmentSession ||--o{ PaymentEvent : references
 
-Redirects to:
-
-```text
-/first-page-brand-palette?flow=2117
+    Visitor {
+      uuid id PK
+      uuid publicId UK
+    }
+    AssessmentSession {
+      uuid id PK
+      uuid visitorId FK
+      string flow
+      string flowRevision
+      string ageRange
+      int currentStep
+      string currentStepKey
+      int version
+      enum status
+    }
+    AssessmentAnswer {
+      uuid id PK
+      uuid sessionId FK
+      string stepKey
+      json value
+      int revision
+    }
+    HealthProfile {
+      uuid id PK
+      uuid sessionId FK
+      enum sex
+      int age
+      decimal heightCm
+      decimal weightKg
+      decimal targetWeightKg
+      enum activityLevel
+      enum goal
+    }
+    AssessmentResult {
+      uuid id PK
+      uuid sessionId FK
+      decimal bmi
+      decimal bmr
+      decimal tdee
+      int recommendedCalories
+      datetime targetDate
+      json predictionCurve
+    }
+    Subscription {
+      uuid id PK
+      uuid visitorId FK
+      enum plan
+      enum status
+      datetime expiresAt
+    }
+    PaymentEvent {
+      uuid id PK
+      uuid visitorId FK
+      uuid sessionId FK
+      string idempotencyKey UK
+      enum status
+    }
 ```
 
-### `/first-page-brand-palette?flow=2117`
+`currentStepKey` is the primary recovery pointer for the explicit-page funnel. `currentStep` is retained for compatibility with the earlier questionnaire implementation.
 
-Main BetterMe-inspired age-selection screen.
+## API overview
 
-It loads normalized configuration from:
+### Create an assessment session
 
-```text
-GET /api/config?flow=2117
-```
-
-A compile-time local fallback is rendered immediately so the card layout does not collapse while the API request is pending or if the request fails.
-
-### `/onboarding`
-
-Local confirmation screen.
-
-A successful selection navigates to a URL such as:
-
-```text
-/onboarding?flow=2117&order=53bef0a5-c144-46d7-b63f-9b534029bb70&age=18-29
-```
-
-This page is deliberately only a local confirmation page. It does not reproduce or call BetterMe's actual questionnaire.
-
-## API
-
-### `GET /api/health`
-
-Response:
-
-```json
-{
-  "status": "ok"
-}
-```
-
-### `GET /api/config?flow=2117`
-
-Returns normalized local page configuration.
-
-Example:
-
-```bash
-curl "http://localhost:3000/api/config?flow=2117"
-```
-
-Representative response shape:
-
-```json
-{
-  "flow": "2117",
-  "page": {
-    "id": 6893,
-    "type": "generated",
-    "title": "First Page Type",
-    "variant": "four_cards"
-  },
-  "brand": {
-    "logoUrl": "https://image-service.betterme.world/...",
-    "logoAlt": "BetterMe"
-  },
-  "heading": {
-    "line1": "HOME PILATES",
-    "line2": "WORKOUT STUDIO",
-    "prompt": "CHOOSE YOUR AGE"
-  },
-  "cards": []
-}
-```
-
-Unsupported flows return HTTP `404`:
-
-```json
-{
-  "error": {
-    "code": "CONFIG_NOT_FOUND",
-    "message": "No local configuration exists for flow \"9999\"."
-  }
-}
-```
-
-### `POST /api/selections`
-
-Request:
-
-```json
-{
-  "flow": "2117",
-  "ageRange": "18-29"
-}
-```
-
-Supported age values:
-
-```text
-18-29
-30-39
-40-49
-50+
-```
-
-Example:
-
-```bash
-curl \
-  -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"flow":"2117","ageRange":"18-29"}' \
-  "http://localhost:3000/api/selections"
-```
-
-Successful response:
+The landing page uses the compatibility endpoint:
 
 ```http
-HTTP/1.1 201 Created
+POST /api/selections
+Content-Type: application/json
 ```
 
 ```json
 {
-  "orderId": "53bef0a5-c144-46d7-b63f-9b534029bb70",
-  "nextUrl": "/onboarding?flow=2117&order=53bef0a5-c144-46d7-b63f-9b534029bb70&age=18-29",
-  "selection": {
-    "flow": "2117",
-    "ageRange": "18-29"
-  }
+  "flow": "2117",
+  "ageRange": "30-39"
 }
 ```
 
-`orderId` is generated locally with `crypto.randomUUID()`.
+The versioned endpoint is also available:
 
-Malformed JSON returns HTTP `400`:
+```http
+POST /api/v1/sessions
+```
+
+### Resume a session
+
+```http
+GET /api/v1/sessions/:sessionId
+```
+
+The returned server snapshot contains `currentStepKey`, `currentStep`, `version`, `status`, and persisted answers. `/onboarding` maps `currentStepKey` through a fixed route whitelist and redirects to the corresponding explicit page, so recovery does not depend on browser `sessionStorage`.
+
+### Save explicit page state
+
+The explicit route pages use:
+
+```http
+PATCH /api/v1/sessions/:sessionId/state
+Content-Type: application/json
+```
+
+Example:
 
 ```json
 {
-  "error": {
-    "code": "INVALID_JSON",
-    "message": "Request body must contain valid JSON."
-  }
+  "stepKey": "stairs",
+  "value": "slightly-winded",
+  "expectedVersion": 6,
+  "nextStepKey": "limitations"
 }
 ```
 
-Missing or malformed fields return HTTP `400`:
+Conditional parents can additionally send `clearStepKeys` to remove stale child-branch answers when the user changes a previous choice.
+
+### Save exact health/profile data
+
+A dedicated validated health endpoint is also available:
+
+```http
+PATCH /api/v1/sessions/:sessionId/health
+Content-Type: application/json
+```
 
 ```json
 {
-  "error": {
-    "code": "INVALID_PAYLOAD",
-    "message": "Request body must contain non-empty string fields \"flow\" and \"ageRange\"."
-  }
+  "field": "weightKg",
+  "value": 70,
+  "expectedVersion": 4
 }
 ```
 
-Unsupported flows return HTTP `422`:
+Supported fields:
+
+- `sex`: `FEMALE | MALE | OTHER`
+- `age`: integer 18-100
+- `heightCm`: 90-243
+- `weightKg`: 35-300
+- `targetWeightKg`: 35-300
+
+The height page supports CM or FT display input and persists a canonical centimeter value.
+
+### Legacy questionnaire answer endpoint
+
+For compatibility with the earlier questionnaire component:
+
+```http
+PATCH /api/v1/sessions/:sessionId/answers
+Content-Type: application/json
+```
 
 ```json
 {
-  "error": {
-    "code": "UNSUPPORTED_FLOW",
-    "message": "Unsupported flow \"9999\".",
-    "details": {
-      "supportedFlows": ["2117"]
-    }
-  }
+  "stepKey": "exerciseFrequency",
+  "answer": "several-week",
+  "stepIndex": 4,
+  "expectedVersion": 10
 }
 ```
 
-Unsupported age ranges return HTTP `422`:
+Answers are upserted by `(sessionId, stepKey)`, revisions increment, and `currentStep` never moves backward.
 
-```json
-{
-  "error": {
-    "code": "UNSUPPORTED_AGE_RANGE",
-    "message": "Unsupported age range \"60-69\".",
-    "details": {
-      "supportedAgeRanges": [
-        "18-29",
-        "30-39",
-        "40-49",
-        "50+"
-      ]
-    }
-  }
-}
+Every mutable save uses optimistic concurrency through `expectedVersion`. A stale write receives HTTP `409` with `SESSION_VERSION_CONFLICT`.
+
+### Complete assessment
+
+```http
+POST /api/v1/sessions/:sessionId/complete
 ```
 
-## Architecture
+Completion requires sex, exact age, height, current weight, target weight, goal, and exercise frequency. The server validates the complete profile, calculates the health result, and persists the normalized profile/result in a transaction. Completion is idempotent.
 
-### `lib/config.ts`
+### Read result
 
-Single local normalized representation of:
+```http
+GET /api/v1/results/:sessionId
+```
 
-- flow metadata
-- logo
-- page headings
-- age cards
-- public legal links
-- Docs menu entries
-- support email
+Unpaid sessions receive only the preview-safe BMI fields. `targetDate`, the real prediction curve, recommended calories, BMR/TDEE, and related paid-only values are physically absent from the unpaid response. Active subscriptions receive the full persisted result.
 
-Both the server-rendered fallback and `/api/config` use this configuration.
+## Mock payment endpoint
 
-### `lib/selection.ts`
+No real payment provider or card data is used.
 
-Contains framework-independent selection validation and URL generation.
+```http
+POST /api/v1/pay
+Idempotency-Key: <unique-key>
+Content-Type: application/json
+```
 
-Keeping validation separate from the route handler makes it directly testable.
-
-### `app/api`
-
-Implements the application's local backend.
-
-No request is proxied to a BetterMe API.
-
-### `components/PilatesLanding.tsx`
-
-Owns browser-side page state:
-
-- configuration loading
-- API errors
-- card submission
-- navigation
-- Docs drawer state
-
-### `components/DocsDrawer.tsx`
-
-Accessible responsive drawer with:
-
-- `role="dialog"`
-- `aria-modal`
-- initial focus
-- Tab focus containment
-- close button
-- Escape handling
-- backdrop handling
-- background scroll locking
-- focus restoration handled by the parent menu button
-
-### `components/HelpPopover.tsx`
-
-Small support popover exposing the published support email through a `mailto:` link.
-
-## Accessibility
-
-The implementation includes:
-
-- semantic `header`, `main`, `section`, `nav`, and `footer`
-- keyboard-operable age buttons
-- visible `:focus-visible` states
-- descriptive image alt text
-- `aria-pressed` and `aria-busy` selection state
-- live regions for loading/errors
-- accessible Docs dialog
-- Escape and backdrop dismissal
-- focus trapping inside the Docs drawer
-- reduced-motion handling through `prefers-reduced-motion`
-
-## Responsive behavior
-
-The desktop layout uses:
-
-- approximately 87 px header
-- four 264 × 281 px cards
-- 24 px card gaps
-- centered four-card row
-
-At mobile widths the layout switches to:
-
-- approximately 70 px compact header
-- two-column card grid
-- 16 px gaps
-- approximately 196 px card height
-
-At 390 px viewport width with 20 px horizontal page padding and a 16 px grid gap, each card is approximately 167 px wide.
-
-## Differences from the source site
-
-This is intentionally not a production BetterMe client.
-
-Differences include:
-
-- no Google Tag Manager
-- no trackers
-- no analytics
-- no cookies copied from the source
-- no payment processing
-- no authentication
-- no subscription creation
-- no upstream BetterMe API mutations
-- no questionnaire API request
-- no external database
-- no real order
-- age selection produces only a local UUID and local confirmation page
-
-The source site's publicly hosted image assets are used through `next/image` for visual fidelity.
-
-Public legal/support links are navigation links only and are not application backend dependencies.
-
-## Testing
-
-Run:
+Example:
 
 ```bash
-npm run test
+curl -X POST "http://localhost:3000/api/v1/pay" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: demo-payment-001" \
+  -H "Cookie: betterme_visitor=<visitor-cookie-value>" \
+  -d '{
+    "sessionId": "<completed-session-id>",
+    "plan": "monthly"
+  }'
 ```
 
-Tests cover:
+Mock durations:
 
-- supported selection validation
-- malformed payload rejection
-- unsupported flow rejection
-- unsupported age rejection
-- encoded onboarding URL generation
-- accessible card rendering
-- age card click behavior
-- busy/disabled card state
+- `monthly`: 30 days
+- `quarterly`: 90 days
 
-For complete verification also run:
+Repeating a successful request with the same idempotency key for the same visitor/session does not create a duplicate purchase.
+
+The checkout UI is a simulation. It does not collect or transmit real card numbers, expiry values, or CVVs.
+
+## Health algorithm
+
+The calculation runs only on the server.
+
+```text
+BMI = weightKg / heightM²
+base BMR = 10 * weightKg + 6.25 * heightCm - 5 * age
+male BMR = base + 5
+female BMR = base - 161
+other BMR = midpoint(male, female)
+TDEE = BMR * activityMultiplier
+```
+
+Recommended calories apply a deterministic bounded adjustment to TDEE. The prediction engine uses bounded weekly change rates and persists a versioned weekly curve and target date.
+
+The result is an educational estimate, not clinical advice.
+
+## Validation
+
+Automated tests cover, among other cases:
+
+- missing required profile data
+- age outside 18-100
+- observed 90-243 cm height boundaries
+- invalid/extreme height and weight
+- numeric strings where actual numbers are required
+- `NaN` / `Infinity`
+- invalid weight-loss/weight-gain target direction
+- target weight outside the supported planning BMI range
+- unsupported questionnaire answers
+- exact age inconsistent with the selected age band
+- repeated/out-of-order writes
+- concurrent writes using the same session version
+- branch-dependent stale-answer cleanup
+- preview/full result access
+- payment idempotency
+- explicit route/source coverage for the observed funnel pages
+
+## Tests
+
+Run the main suite:
 
 ```bash
+npm test
+```
+
+Full local verification after PostgreSQL is running:
+
+```bash
+npm run db:deploy
 npm run lint
 npm run typecheck
-npm run test
+npm test
 npm run build
+npm run test:e2e
+```
+
+Coverage map:
+
+| Area | Test |
+| --- | --- |
+| Health algorithm | `tests/assessment-engine.test.ts` |
+| Extreme/invalid health input | `tests/assessment-validation.test.ts` |
+| Session creation/ownership/recovery | `tests/session-service.integration.test.ts` |
+| Exact profile incremental saves | `tests/health-answer.integration.test.ts` |
+| Explicit-page persistence/OCC/branch cleanup | `tests/page-state.integration.test.ts` |
+| Observed route files/copy constraints | `tests/reference-routes.test.ts` |
+| Completion/result persistence | `tests/completion-service.integration.test.ts` |
+| Preview/full result access | `tests/result-access.integration.test.ts` |
+| Mock payment transition/idempotency | `tests/payment-service.integration.test.ts` |
+| Full explicit-route browser funnel + recovery + checkout | `e2e/full-funnel.spec.ts` |
+
+PostgreSQL integration test files execute serially because they share a resettable test database. The explicit concurrency test still performs simultaneous writes against PostgreSQL.
+
+## CI
+
+`.github/workflows/ci.yml` provisions PostgreSQL 16 as a GitHub Actions service and runs:
+
+```text
+npm ci
+Prisma validate/generate/migrate
+lint
+typecheck
+Vitest
+Next.js build
+Playwright Chromium install
+full E2E
+```
+
+CI intentionally uses the GitHub Actions PostgreSQL service. Local and server database operation uses the checked-in `docker-compose.yml` PostgreSQL configuration.
+
+## Architecture boundaries
+
+- `app/onboarding/**/page.tsx`: explicit page copy, choices, and next-route logic
+- `components/funnel/*`: low-level shared shell/save/query helpers only; no central step renderer
+- `lib/assessment/engine.ts`: deterministic calculation
+- `lib/assessment/validation.ts`: health validation and answer projection
+- `lib/assessment/session-service.ts`: ownership, persistence, revisions, current step key, optimistic concurrency
+- `lib/assessment/completion-service.ts`: completion transaction
+- `lib/assessment/result-access.ts`: preview/full DTOs
+- `lib/payments/payment-service.ts`: mock billing/idempotency transaction
+- `lib/auth/visitor.ts`: anonymous visitor identity
+- route handlers: HTTP parsing/response mapping
+
+## AI usage retrospective
+
+AI was used to accelerate repository inspection, API/schema planning, test-case generation, implementation, and review. Changes were accepted only after automated PostgreSQL and Next.js verification.
+
+One AI suggestion was deliberately rejected: a simple `upsert(sessionId, stepKey)` persistence design. Upsert alone allows stale clients to overwrite each other, so the implementation adds a session-level optimistic `version` guard inside the same transaction and tests that simultaneous writes using one `expectedVersion` cannot both succeed.
+
+A second verification issue involved database test isolation: multiple integration files initially reset one PostgreSQL database concurrently, causing intermittent foreign-key failures. Database-sharing test files are now serialized while intentional concurrency remains inside the concurrency test itself.
+
+The explicit-page refactor also rejected a central `FLOW_STEPS`/generic step renderer. The route-visible content is intentionally written directly in each `page.tsx` so reviewers can inspect one URL by opening one file.
+
+## Known limitations
+
+- Visitor identity is anonymous cookie-based rather than account-based authentication.
+- `/pay` is intentionally simulated.
+- The health algorithm is deterministic educational logic, not a clinical model.
+- Only flow `2117` is implemented.
+- The provided observation notes fully specify the later funnel screens; early pages retained from the original local replica are marked/adapted rather than claimed as exact observed copies.
+
+## Deployment
+
+The database is designed to run as PostgreSQL 16 in Docker. On a server with Docker installed:
+
+```bash
+docker compose up -d
+cp .env.example .env
+npm install
+npm run db:generate
+npm run db:deploy
+npm run build
+npm run start
+```
+
+For a remote application host, change `DATABASE_URL` to the reachable Docker/PostgreSQL host rather than committing credentials to the repository.
+
+The database volume `betterme_postgres_data` persists PostgreSQL data across normal `docker compose down` / restart operations.
+
+```text
+Demo URL: pending deployment
+Paid demo sessionId: pending deployment
 ```

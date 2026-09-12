@@ -1,0 +1,168 @@
+.shell {
+  min-height: 100vh;
+  background: #fbf8f2;
+  color: #4a2e22;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px clamp(20px, 4vw, 48px);
+  border-bottom: 1px solid rgba(74, 46, 34, 0.08);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+}
+
+.brand {
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.progressTrack {
+  height: 5px;
+  background: #ece4d9;
+}
+
+.progressTrack span {
+  display: block;
+  height: 100%;
+  background: #4a2e22;
+  transition: width 240ms ease;
+}
+
+.card {
+  width: min(100% - 32px, 560px);
+  margin: 0 auto;
+  padding: 72px 0 56px;
+}
+
+.card h1 {
+  margin: 0;
+  font-size: clamp(2rem, 7vw, 3.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+}
+
+.card > p,
+.card form > p {
+  line-height: 1.6;
+}
+
+.eyebrow {
+  margin-bottom: 16px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  margin: 18px 0 32px;
+  color: #7c675d;
+}
+
+.choiceGrid {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.choiceGrid button,
+.primary,
+.card > button {
+  min-height: 58px;
+  border: 1px solid rgba(74, 46, 34, 0.14);
+  border-radius: 18px;
+  background: #fff;
+  color: #4a2e22;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.choiceGrid button:hover,
+.choiceGrid button:focus-visible {
+  border-color: #4a2e22;
+  transform: translateY(-1px);
+}
+
+.inputWrap {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin: 28px 0 16px;
+  padding: 8px 18px;
+  border: 2px solid #4a2e22;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.inputWrap input {
+  grid-column: 1;
+  grid-row: 1;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #4a2e22;
+  font: inherit;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.inputWrap span {
+  grid-column: 2;
+  grid-row: 1;
+  color: #7c675d;
+  font-weight: 700;
+}
+
+.primary {
+  width: 100%;
+  border-color: #4a2e22;
+  background: #4a2e22;
+  color: #fff;
+}
+
+.primary:disabled,
+.choiceGrid button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.error,
+.floatingError {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff0ec;
+  color: #8f321f;
+}
+
+.error {
+  margin-top: 18px;
+}
+
+.floatingError {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 50;
+  max-width: min(420px, calc(100vw - 40px));
+  box-shadow: 0 14px 40px rgba(74, 46, 34, 0.14);
+}
+
+.note {
+  margin-top: 30px;
+  color: #8b776d;
+  font-size: 0.82rem;
+}
+
+.loading {
+  margin: 0;
+  padding: 18vh 24px;
+  text-align: center;
+  color: #7c675d;
+}

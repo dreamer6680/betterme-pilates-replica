@@ -8,9 +8,9 @@ export type PreviewResultResponse = {
   result: {
     bmi: number;
     bmiCategory: string;
-    targetDate: string;
   };
   locked: readonly [
+    "targetDate",
     "predictionCurve",
     "recommendedCalories",
     "weeklyPlan",
@@ -35,6 +35,7 @@ export type FullResultResponse = {
 export type ResultResponse = PreviewResultResponse | FullResultResponse;
 
 const LOCKED_FIELDS = [
+  "targetDate",
   "predictionCurve",
   "recommendedCalories",
   "weeklyPlan",
@@ -105,7 +106,6 @@ export async function getResultForVisitor(
       result: {
         bmi: Number(result.bmi),
         bmiCategory: result.bmiCategory,
-        targetDate: result.targetDate.toISOString(),
       },
       locked: LOCKED_FIELDS,
     };

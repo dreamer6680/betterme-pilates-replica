@@ -1,6 +1,6 @@
 # BetterMe-Inspired Home Pilates Assessment
 
-A full-stack Next.js take-home implementation inspired by the public BetterMe Home Pilates quiz funnel. It implements persisted anonymous assessment sessions, health calculations, preview/full result access, a simulated subscription payment, automated tests, and browser E2E coverage.
+A full-stack Next.js take-home implementation inspired by the public BetterMe Home Pilates quiz funnel. It implements persisted anonymous assessment sessions, explicit per-URL funnel pages, health calculations, preview/full result access, a simulated subscription payment, automated tests, and browser E2E coverage.
 
 > Independent educational replica. It does not proxy private BetterMe APIs, process real payments, or provide medical advice.
 
@@ -20,15 +20,38 @@ A full-stack Next.js take-home implementation inspired by the public BetterMe Ho
 ```text
 Age selection
   -> anonymous Visitor + AssessmentSession
-  -> exact profile data saved incrementally
-  -> Pilates questionnaire saved step-by-step
+  -> explicit page.tsx routes save answers step-by-step
+  -> body/health data collected near the end of the questionnaire
+  -> analysis / conversion pages
+  -> checkout
   -> server-side completion/health calculation
-  -> preview result (locked fields omitted)
+  -> preview result (locked fields physically omitted)
   -> mock /pay subscription activation
   -> full result
 ```
 
 The browser receives an HTTP-only anonymous visitor cookie. The public session UUID is used to resume the assessment, but every session/result/payment operation also verifies visitor ownership on the server.
+
+The observed funnel is implemented as separate App Router files such as:
+
+```text
+app/onboarding/stairs/page.tsx
+app/onboarding/limitations/page.tsx
+app/onboarding/accessories-experience/page.tsx
+...
+app/onboarding/height/page.tsx
+app/onboarding/weight/page.tsx
+app/onboarding/target-weight/page.tsx
+app/onboarding/age/page.tsx
+...
+app/funnel-prompts/page.tsx
+app/progress-graph/default/page.tsx
+app/country-change/page.tsx
+app/scratch-card/page.tsx
+app/checkout/reason-to-believe/page.tsx
+```
+
+Visible copy, choices, route-specific branching, and destination URLs live directly in each page file rather than being generated from a central step configuration.
 
 ## Quick start with Docker PostgreSQL
 
@@ -133,8 +156,10 @@ erDiagram
       uuid id PK
       uuid visitorId FK
       string flow
+      string flowRevision
       string ageRange
       int currentStep
+      string currentStepKey
       int version
       enum status
     }
@@ -182,6 +207,8 @@ erDiagram
     }
 ```
 
+`currentStepKey` is the primary recovery pointer for the explicit-page funnel. `currentStep` is retained for compatibility with the earlier questionnaire implementation.
+
 ## API overview
 
 ### Create an assessment session
@@ -212,9 +239,33 @@ POST /api/v1/sessions
 GET /api/v1/sessions/:sessionId
 ```
 
-The returned server snapshot contains `currentStep`, `version`, `status`, and persisted answers, allowing recovery even after browser `sessionStorage` is cleared.
+The returned server snapshot contains `currentStepKey`, `currentStep`, `version`, `status`, and persisted answers. `/onboarding` maps `currentStepKey` through a fixed route whitelist and redirects to the corresponding explicit page, so recovery does not depend on browser `sessionStorage`.
+
+### Save explicit page state
+
+The explicit route pages use:
+
+```http
+PATCH /api/v1/sessions/:sessionId/state
+Content-Type: application/json
+```
+
+Example:
+
+```json
+{
+  "stepKey": "stairs",
+  "value": "slightly-winded",
+  "expectedVersion": 6,
+  "nextStepKey": "limitations"
+}
+```
+
+Conditional parents can additionally send `clearStepKeys` to remove stale child-branch answers when the user changes a previous choice.
 
 ### Save exact health/profile data
+
+A dedicated validated health endpoint is also available:
 
 ```http
 PATCH /api/v1/sessions/:sessionId/health
@@ -233,11 +284,15 @@ Supported fields:
 
 - `sex`: `FEMALE | MALE | OTHER`
 - `age`: integer 18-100
-- `heightCm`: 120-230
+- `heightCm`: 90-243
 - `weightKg`: 35-300
 - `targetWeightKg`: 35-300
 
-### Save questionnaire progress
+The height page supports CM or FT display input and persists a canonical centimeter value.
+
+### Legacy questionnaire answer endpoint
+
+For compatibility with the earlier questionnaire component:
 
 ```http
 PATCH /api/v1/sessions/:sessionId/answers
@@ -271,7 +326,7 @@ Completion requires sex, exact age, height, current weight, target weight, goal,
 GET /api/v1/results/:sessionId
 ```
 
-Unpaid sessions receive a preview DTO. Protected values such as the real prediction curve and recommended calories are physically absent from the response. Active subscriptions receive the full persisted result.
+Unpaid sessions receive only the preview-safe BMI fields. `targetDate`, the real prediction curve, recommended calories, BMR/TDEE, and related paid-only values are physically absent from the unpaid response. Active subscriptions receive the full persisted result.
 
 ## Mock payment endpoint
 
@@ -303,6 +358,8 @@ Mock durations:
 
 Repeating a successful request with the same idempotency key for the same visitor/session does not create a duplicate purchase.
 
+The checkout UI is a simulation. It does not collect or transmit real card numbers, expiry values, or CVVs.
+
 ## Health algorithm
 
 The calculation runs only on the server.
@@ -326,6 +383,7 @@ Automated tests cover, among other cases:
 
 - missing required profile data
 - age outside 18-100
+- observed 90-243 cm height boundaries
 - invalid/extreme height and weight
 - numeric strings where actual numbers are required
 - `NaN` / `Infinity`
@@ -335,8 +393,10 @@ Automated tests cover, among other cases:
 - exact age inconsistent with the selected age band
 - repeated/out-of-order writes
 - concurrent writes using the same session version
+- branch-dependent stale-answer cleanup
 - preview/full result access
 - payment idempotency
+- explicit route/source coverage for the observed funnel pages
 
 ## Tests
 
@@ -365,10 +425,12 @@ Coverage map:
 | Extreme/invalid health input | `tests/assessment-validation.test.ts` |
 | Session creation/ownership/recovery | `tests/session-service.integration.test.ts` |
 | Exact profile incremental saves | `tests/health-answer.integration.test.ts` |
+| Explicit-page persistence/OCC/branch cleanup | `tests/page-state.integration.test.ts` |
+| Observed route files/copy constraints | `tests/reference-routes.test.ts` |
 | Completion/result persistence | `tests/completion-service.integration.test.ts` |
 | Preview/full result access | `tests/result-access.integration.test.ts` |
 | Mock payment transition/idempotency | `tests/payment-service.integration.test.ts` |
-| Full browser funnel + interrupted recovery | `e2e/full-funnel.spec.ts` |
+| Full explicit-route browser funnel + recovery + checkout | `e2e/full-funnel.spec.ts` |
 
 PostgreSQL integration test files execute serially because they share a resettable test database. The explicit concurrency test still performs simultaneous writes against PostgreSQL.
 
@@ -387,19 +449,20 @@ Playwright Chromium install
 full E2E
 ```
 
-CI intentionally uses the GitHub Actions PostgreSQL service rather than Docker Compose. `docker-compose.yml` is the reproducible local/server database runtime configuration.
+CI intentionally uses the GitHub Actions PostgreSQL service. Local and server database operation uses the checked-in `docker-compose.yml` PostgreSQL configuration.
 
 ## Architecture boundaries
 
+- `app/onboarding/**/page.tsx`: explicit page copy, choices, and next-route logic
+- `components/funnel/*`: low-level shared shell/save/query helpers only; no central step renderer
 - `lib/assessment/engine.ts`: deterministic calculation
-- `lib/assessment/validation.ts`: validation and answer projection
-- `lib/assessment/session-service.ts`: ownership, persistence, revisions, optimistic concurrency
+- `lib/assessment/validation.ts`: health validation and answer projection
+- `lib/assessment/session-service.ts`: ownership, persistence, revisions, current step key, optimistic concurrency
 - `lib/assessment/completion-service.ts`: completion transaction
 - `lib/assessment/result-access.ts`: preview/full DTOs
 - `lib/payments/payment-service.ts`: mock billing/idempotency transaction
 - `lib/auth/visitor.ts`: anonymous visitor identity
 - route handlers: HTTP parsing/response mapping
-- React components: collection/presentation; no health calculation logic
 
 ## AI usage retrospective
 
@@ -409,12 +472,15 @@ One AI suggestion was deliberately rejected: a simple `upsert(sessionId, stepKey
 
 A second verification issue involved database test isolation: multiple integration files initially reset one PostgreSQL database concurrently, causing intermittent foreign-key failures. Database-sharing test files are now serialized while intentional concurrency remains inside the concurrency test itself.
 
+The explicit-page refactor also rejected a central `FLOW_STEPS`/generic step renderer. The route-visible content is intentionally written directly in each `page.tsx` so reviewers can inspect one URL by opening one file.
+
 ## Known limitations
 
 - Visitor identity is anonymous cookie-based rather than account-based authentication.
 - `/pay` is intentionally simulated.
 - The health algorithm is deterministic educational logic, not a clinical model.
 - Only flow `2117` is implemented.
+- The provided observation notes fully specify the later funnel screens; early pages retained from the original local replica are marked/adapted rather than claimed as exact observed copies.
 
 ## Deployment
 

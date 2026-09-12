@@ -53,24 +53,18 @@ function WeightGainEventsContent() {
     }
   }
 
-  const choices = [
-    ["relationship", "Marriage or relationship"],
-    ["busy-life", "Busy work or family life"],
-    ["financial", "Financial struggles"],
-    ["covid", "COVID-19 pandemic"],
-    ["stress", "Stress or worry"],
-    ["aging", "Slower metabolism due to aging"],
-    ["holidays", "Holidays and social gatherings"],
-  ] as const;
-
   return (
     <FunnelPage section="Almost There" step="weightGainEvents" backHref={`/onboarding/experts?${params.toString()}`}>
       <span className={styles.kicker}>Almost There</span>
       <h1>Have any of the following events led to weight gain in the last few years?</h1>
       <div className={styles.choices}>
-        {choices.map(([value, label]) => (
-          <button key={value} className={`${styles.choice} ${selected.includes(value) ? styles.choiceSelected : ""}`} type="button" onClick={() => toggle(value)}>{label}</button>
-        ))}
+        <button className={`${styles.choice} ${selected.includes("relationship") ? styles.choiceSelected : ""}`} type="button" onClick={() => toggle("relationship")}>Marriage or relationship</button>
+        <button className={`${styles.choice} ${selected.includes("busy-life") ? styles.choiceSelected : ""}`} type="button" onClick={() => toggle("busy-life")}>Busy work or family life</button>
+        <button className={`${styles.choice} ${selected.includes("financial") ? styles.choiceSelected : ""}`} type="button" onClick={() => toggle("financial")}>Financial struggles</button>
+        <button className={`${styles.choice} ${selected.includes("covid") ? styles.choiceSelected : ""}`} type="button" onClick={() => toggle("covid")}>COVID-19 pandemic</button>
+        <button className={`${styles.choice} ${selected.includes("stress") ? styles.choiceSelected : ""}`} type="button" onClick={() => toggle("stress")}>Stress or worry</button>
+        <button className={`${styles.choice} ${selected.includes("aging") ? styles.choiceSelected : ""}`} type="button" onClick={() => toggle("aging")}>Slower metabolism due to aging</button>
+        <button className={`${styles.choice} ${selected.includes("holidays") ? styles.choiceSelected : ""}`} type="button" onClick={() => toggle("holidays")}>Holidays and social gatherings</button>
         <button className={`${styles.choice} ${selected.includes("none") ? styles.choiceSelected : ""}`} type="button" onClick={() => toggle("none")}>None of the above</button>
       </div>
       <button className={styles.primary} type="button" disabled={selected.length === 0 || saving} onClick={save}>{saving ? "Saving…" : "NEXT"}</button>

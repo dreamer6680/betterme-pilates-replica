@@ -21,6 +21,44 @@ const saveAnswerSchema = z
   })
   .strict();
 
+const saveHealthAnswerSchema = z.discriminatedUnion("field", [
+  z
+    .object({
+      field: z.literal("sex"),
+      value: z.enum(["FEMALE", "MALE", "OTHER"]),
+      expectedVersion: z.number().int().min(0),
+    })
+    .strict(),
+  z
+    .object({
+      field: z.literal("age"),
+      value: z.number().finite().int().min(18).max(100),
+      expectedVersion: z.number().int().min(0),
+    })
+    .strict(),
+  z
+    .object({
+      field: z.literal("heightCm"),
+      value: z.number().finite().min(120).max(230),
+      expectedVersion: z.number().int().min(0),
+    })
+    .strict(),
+  z
+    .object({
+      field: z.literal("weightKg"),
+      value: z.number().finite().min(35).max(300),
+      expectedVersion: z.number().int().min(0),
+    })
+    .strict(),
+  z
+    .object({
+      field: z.literal("targetWeightKg"),
+      value: z.number().finite().min(35).max(300),
+      expectedVersion: z.number().int().min(0),
+    })
+    .strict(),
+]);
+
 export type AssessmentSessionSnapshot = {
   id: string;
   flow: string;
@@ -37,6 +75,8 @@ export type SaveAssessmentAnswerInput = {
   stepIndex: number;
   expectedVersion: number;
 };
+
+export type SaveHealthAnswerInput = z.infer<typeof saveHealthAnswerSchema>;
 
 function normalizeAnswers(
   answers: Array<{ stepKey: string; value: Prisma.JsonValue }>,
@@ -122,6 +162,69 @@ function validateAnswerValue(stepKey: string, stepIndex: number, answer: unknown
   );
 }
 
+async function assertVersionedDraftSession(
+  tx: Prisma.TransactionClient,
+  visitorId: string,
+  sessionId: string,
+  expectedVersion: number,
+) {
+  const guarded = await tx.assessmentSession.updateMany({
+    where: {
+      id: sessionId,
+      visitorId,
+      status: "DRAFT",
+      version: expectedVersion,
+    },
+    data: {
+      version: { increment: 1 },
+    },
+  });
+
+  if (guarded.count === 1) {
+    return;
+  }
+
+  const current = await tx.assessmentSession.findUnique({
+    where: { id: sessionId },
+    select: {
+      visitorId: true,
+      version: true,
+      status: true,
+    },
+  });
+
+  if (!current) {
+    throw new AppError(
+      404,
+      "SESSION_NOT_FOUND",
+      "The assessment session was not found.",
+    );
+  }
+
+  if (current.visitorId !== visitorId) {
+    throw new AppError(
+      403,
+      "SESSION_FORBIDDEN",
+      "This assessment session belongs to another visitor.",
+    );
+  }
+
+  if (current.status !== "DRAFT") {
+    throw new AppError(
+      409,
+      "SESSION_COMPLETED",
+      "Completed assessment sessions cannot be edited.",
+    );
+  }
+
+  throw new AppError(
+    409,
+    "SESSION_VERSION_CONFLICT",
+    "The session changed since this client loaded it.",
+    { currentVersion: current.version },
+  );
+}
+
 export async function createAssessmentSession(
   visitorId: string,
   input: unknown,
@@ -191,6 +294,65 @@ export async function getAssessmentSession(
   return toSnapshot(session);
 }
 
+export async function saveHealthAnswer(
+  visitorId: string,
+  sessionId: string,
+  input: SaveHealthAnswerInput,
+): Promise<AssessmentSessionSnapshot> {
+  const parsed = saveHealthAnswerSchema.safeParse(input);
+
+  if (!parsed.success) {
+    throw new AppError(
+      400,
+      "INVALID_HEALTH_ANSWER",
+      "The health answer is invalid.",
+      parsed.error.flatten(),
+    );
+  }
+
+  return prisma.$transaction(async (tx) => {
+    await assertVersionedDraftSession(
+      tx,
+      visitorId,
+      sessionId,
+      parsed.data.expectedVersion,
+    );
+
+    await tx.assessmentAnswer.upsert({
+      where: {
+        sessionId_stepKey: {
+          sessionId,
+          stepKey: parsed.data.field,
+        },
+      },
+      create: {
+        sessionId,
+        stepKey: parsed.data.field,
+        value: parsed.data.value as Prisma.InputJsonValue,
+        revision: 1,
+      },
+      update: {
+        value: parsed.data.value as Prisma.InputJsonValue,
+        revision: { increment: 1 },
+      },
+    });
+
+    const session = await tx.assessmentSession.findUniqueOrThrow({
+      where: { id: sessionId },
+      include: {
+        answers: {
+          select: {
+            stepKey: true,
+            value: true,
+          },
+        },
+      },
+    });
+
+    return toSnapshot(session);
+  });
+}
+
 export async function saveAssessmentAnswer(
   visitorId: string,
   sessionId: string,
@@ -214,59 +376,12 @@ export async function saveAssessmentAnswer(
   );
 
   return prisma.$transaction(async (tx) => {
-    const guarded = await tx.assessmentSession.updateMany({
-      where: {
-        id: sessionId,
-        visitorId,
-        status: "DRAFT",
-        version: parsed.data.expectedVersion,
-      },
-      data: {
-        version: { increment: 1 },
-      },
-    });
-
-    if (guarded.count !== 1) {
-      const current = await tx.assessmentSession.findUnique({
-        where: { id: sessionId },
-        select: {
-          visitorId: true,
-          version: true,
-          status: true,
-        },
-      });
-
-      if (!current) {
-        throw new AppError(
-          404,
-          "SESSION_NOT_FOUND",
-          "The assessment session was not found.",
-        );
-      }
-
-      if (current.visitorId !== visitorId) {
-        throw new AppError(
-          403,
-          "SESSION_FORBIDDEN",
-          "This assessment session belongs to another visitor.",
-        );
-      }
-
-      if (current.status !== "DRAFT") {
-        throw new AppError(
-          409,
-          "SESSION_COMPLETED",
-          "Completed assessment sessions cannot be edited.",
-        );
-      }
-
-      throw new AppError(
-        409,
-        "SESSION_VERSION_CONFLICT",
-        "The session changed since this client loaded it.",
-        { currentVersion: current.version },
-      );
-    }
+    await assertVersionedDraftSession(
+      tx,
+      visitorId,
+      sessionId,
+      parsed.data.expectedVersion,
+    );
 
     await tx.assessmentAnswer.upsert({
       where: {

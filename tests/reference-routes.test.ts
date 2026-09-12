@@ -64,4 +64,25 @@ describe("reference-observed explicit route pages", () => {
       expect(() => readFileSync(resolve(process.cwd(), file), "utf8")).not.toThrow();
     }
   });
+
+  it("does not persist non-routable recovery keys between multi-save health fields", () => {
+    const healthPages = [
+      "app/onboarding/height/page.tsx",
+      "app/onboarding/weight/page.tsx",
+      "app/onboarding/target-weight/page.tsx",
+    ];
+    const forbiddenRecoveryKeys = [
+      'nextStepKey: "heightDisplayUnit"',
+      'nextStepKey: "healthConsent"',
+      'nextStepKey: "weightDisplayUnit"',
+      'nextStepKey: "targetWeightDisplayUnit"',
+    ];
+
+    for (const file of healthPages) {
+      const source = readFileSync(resolve(process.cwd(), file), "utf8");
+      for (const forbidden of forbiddenRecoveryKeys) {
+        expect(source).not.toContain(forbidden);
+      }
+    }
+  });
 });

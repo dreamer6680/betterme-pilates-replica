@@ -21,6 +21,16 @@ const saveAnswerSchema = z
   })
   .strict();
 
+const savePageStateSchema = z
+  .object({
+    stepKey: z.string().min(1).max(120),
+    value: z.unknown(),
+    expectedVersion: z.number().int().min(0),
+    nextStepKey: z.string().min(1).max(120),
+    clearStepKeys: z.array(z.string().min(1).max(120)).max(20).optional(),
+  })
+  .strict();
+
 const saveHealthAnswerSchema = z.discriminatedUnion("field", [
   z
     .object({
@@ -62,8 +72,10 @@ const saveHealthAnswerSchema = z.discriminatedUnion("field", [
 export type AssessmentSessionSnapshot = {
   id: string;
   flow: string;
+  flowRevision: string;
   ageRange: string | null;
   currentStep: number;
+  currentStepKey: string | null;
   version: number;
   status: AssessmentStatus;
   answers: Record<string, unknown>;
@@ -74,6 +86,14 @@ export type SaveAssessmentAnswerInput = {
   answer: unknown;
   stepIndex: number;
   expectedVersion: number;
+};
+
+export type SavePageStateInput = {
+  stepKey: string;
+  value: unknown;
+  expectedVersion: number;
+  nextStepKey: string;
+  clearStepKeys?: string[];
 };
 
 function normalizeAnswers(
@@ -87,8 +107,10 @@ function normalizeAnswers(
 function toSnapshot(session: {
   id: string;
   flow: string;
+  flowRevision: string;
   ageRange: string | null;
   currentStep: number;
+  currentStepKey: string | null;
   version: number;
   status: AssessmentStatus;
   answers: Array<{ stepKey: string; value: Prisma.JsonValue }>;
@@ -96,8 +118,10 @@ function toSnapshot(session: {
   return {
     id: session.id,
     flow: session.flow,
+    flowRevision: session.flowRevision,
     ageRange: session.ageRange,
     currentStep: session.currentStep,
+    currentStepKey: session.currentStepKey,
     version: session.version,
     status: session.status,
     answers: normalizeAnswers(session.answers),
@@ -158,6 +182,28 @@ function validateAnswerValue(stepKey: string, stepIndex: number, answer: unknown
     "INVALID_ANSWER_INPUT",
     "This questionnaire step does not accept an answer.",
   );
+}
+
+function toJsonValue(value: unknown): Prisma.InputJsonValue {
+  if (value === undefined) {
+    throw new AppError(
+      400,
+      "INVALID_PAGE_STATE",
+      "Page state must be JSON serializable.",
+    );
+  }
+
+  try {
+    JSON.stringify(value);
+  } catch {
+    throw new AppError(
+      400,
+      "INVALID_PAGE_STATE",
+      "Page state must be JSON serializable.",
+    );
+  }
+
+  return value as Prisma.InputJsonValue;
 }
 
 async function assertVersionedDraftSession(
@@ -290,6 +336,77 @@ export async function getAssessmentSession(
   }
 
   return toSnapshot(session);
+}
+
+export async function savePageState(
+  visitorId: string,
+  sessionId: string,
+  input: SavePageStateInput,
+): Promise<AssessmentSessionSnapshot> {
+  const parsed = savePageStateSchema.safeParse(input);
+
+  if (!parsed.success) {
+    throw new AppError(
+      400,
+      "INVALID_PAGE_STATE",
+      "The page state request is invalid.",
+      parsed.error.flatten(),
+    );
+  }
+
+  const value = toJsonValue(parsed.data.value);
+
+  return prisma.$transaction(async (tx) => {
+    await assertVersionedDraftSession(
+      tx,
+      visitorId,
+      sessionId,
+      parsed.data.expectedVersion,
+    );
+
+    await tx.assessmentAnswer.upsert({
+      where: {
+        sessionId_stepKey: {
+          sessionId,
+          stepKey: parsed.data.stepKey,
+        },
+      },
+      create: {
+        sessionId,
+        stepKey: parsed.data.stepKey,
+        value,
+        revision: 1,
+      },
+      update: {
+        value,
+        revision: { increment: 1 },
+      },
+    });
+
+    if (parsed.data.clearStepKeys?.length) {
+      await tx.assessmentAnswer.deleteMany({
+        where: {
+          sessionId,
+          stepKey: { in: parsed.data.clearStepKeys },
+        },
+      });
+    }
+
+    const session = await tx.assessmentSession.update({
+      where: { id: sessionId },
+      data: { currentStepKey: parsed.data.nextStepKey },
+      include: {
+        answers: {
+          select: {
+            stepKey: true,
+            value: true,
+          },
+        },
+      },
+    });
+
+    return toSnapshot(session);
+  });
 }
 
 export async function saveHealthAnswer(

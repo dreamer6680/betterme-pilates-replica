@@ -49,7 +49,7 @@ const saveHealthAnswerSchema = z.discriminatedUnion("field", [
   z
     .object({
       field: z.literal("heightCm"),
-      value: z.number().finite().min(120).max(230),
+      value: z.number().finite().min(90).max(243),
       expectedVersion: z.number().int().min(0),
     })
     .strict(),

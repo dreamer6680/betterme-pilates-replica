@@ -62,6 +62,28 @@ describe("incremental health answers", () => {
     });
   });
 
+  it("accepts the observed 90 to 243 cm height boundaries incrementally", async () => {
+    const visitor = await prisma.visitor.create({ data: {} });
+    const session = await createAssessmentSession(visitor.id, {
+      flow: "2117",
+      ageRange: "30-39",
+    });
+
+    const minimum = await saveHealthAnswer(visitor.id, session.id, {
+      field: "heightCm",
+      value: 90,
+      expectedVersion: 0,
+    });
+    const maximum = await saveHealthAnswer(visitor.id, session.id, {
+      field: "heightCm",
+      value: 243,
+      expectedVersion: minimum.version,
+    });
+
+    expect(maximum.answers.heightCm).toBe(243);
+    expect(maximum.version).toBe(2);
+  });
+
   it("recovers saved health answers from the server session", async () => {
     const visitor = await prisma.visitor.create({ data: {} });
     const session = await createAssessmentSession(visitor.id, {

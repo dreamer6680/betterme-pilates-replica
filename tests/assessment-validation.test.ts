@@ -17,8 +17,8 @@ describe("healthProfileSchema", () => {
     ["age", 17],
     ["age", 101],
     ["heightCm", 0],
-    ["heightCm", 119],
-    ["heightCm", 231],
+    ["heightCm", 89],
+    ["heightCm", 244],
     ["weightKg", -1],
     ["weightKg", 34],
     ["weightKg", 301],
@@ -34,6 +34,11 @@ describe("healthProfileSchema", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it("accepts the observed height range boundaries", () => {
+    expect(healthProfileSchema.safeParse({ ...validProfile, heightCm: 90 }).success).toBe(true);
+    expect(healthProfileSchema.safeParse({ ...validProfile, heightCm: 243 }).success).toBe(true);
   });
 
   it("rejects a target weight that produces an implausibly low BMI", () => {

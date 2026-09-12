@@ -34,15 +34,15 @@ function AnalysisContent() {
   useEffect(() => {
     if (progress !== 100 || !sessionId) return;
     const finishId = window.setTimeout(() => {
-      void (async () => {
-        try {
-          await fetch(`/api/v1/sessions/${sessionId}/complete`, { method: "POST" });
-          await saveExplicitPageState(sessionId, { stepKey: "analysis", value: "completed", nextStepKey: "wellnessProfile" });
-        } catch {
-          // The conversion flow remains independently resumable even when calculation completion is deferred.
-        }
-        router.push(appendFunnelQuery("/onboarding/wellness-profile", sessionId, flow, age));
-      })();
+      void saveExplicitPageState(sessionId, {
+        stepKey: "analysis",
+        value: "completed",
+        nextStepKey: "wellnessProfile",
+      })
+        .catch(() => undefined)
+        .finally(() => {
+          router.push(appendFunnelQuery("/onboarding/wellness-profile", sessionId, flow, age));
+        });
     }, 500);
     return () => window.clearTimeout(finishId);
   }, [age, flow, progress, router, sessionId]);

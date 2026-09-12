@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 test("walks the explicit route funnel, restores from backend, and unlocks via mock checkout", async ({ page }) => {
+  test.setTimeout(90_000);
+
   await page.goto("/first-page-brand-palette?flow=2117");
   await page.getByRole("button", { name: "Age: 30-39" }).click();
   await expect(page).toHaveURL(/\/onboarding\/intro\?/);

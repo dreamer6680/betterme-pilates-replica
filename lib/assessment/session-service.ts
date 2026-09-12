@@ -76,8 +76,6 @@ export type SaveAssessmentAnswerInput = {
   expectedVersion: number;
 };
 
-export type SaveHealthAnswerInput = z.infer<typeof saveHealthAnswerSchema>;
-
 function normalizeAnswers(
   answers: Array<{ stepKey: string; value: Prisma.JsonValue }>,
 ): Record<string, unknown> {
@@ -297,7 +295,7 @@ export async function getAssessmentSession(
 export async function saveHealthAnswer(
   visitorId: string,
   sessionId: string,
-  input: SaveHealthAnswerInput,
+  input: unknown,
 ): Promise<AssessmentSessionSnapshot> {
   const parsed = saveHealthAnswerSchema.safeParse(input);
 

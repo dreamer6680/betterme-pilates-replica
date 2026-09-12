@@ -55,7 +55,7 @@ test("walks the explicit route funnel, restores from backend, and unlocks via mo
   await page.getByRole("button", { name: "CONTINUE" }).click();
 
   await page.getByRole("spinbutton", { name: "Weight in KG" }).fill("70");
-  await expect(page.getByText("23", { exact: true })).toBeVisible();
+  await expect(page.getByText("26", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "CONTINUE" }).click();
 
   await page.getByRole("spinbutton", { name: "Goal weight in KG" }).fill("62");

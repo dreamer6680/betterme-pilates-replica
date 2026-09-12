@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AssessmentStatus {
+  DRAFT
+  COMPLETED
+}
+
+enum ProfileSex {
+  FEMALE
+  MALE
+  OTHER
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHT
+  MODERATE
+  ACTIVE
+  VERY_ACTIVE
+}
+
+enum HealthGoal {
+  LOSE_WEIGHT
+  MAINTAIN
+  GAIN_WEIGHT
+  FITNESS
+}
+
+enum SubscriptionStatus {
+  INACTIVE
+  ACTIVE
+  EXPIRED
+}
+
+enum SubscriptionPlan {
+  MONTHLY
+  QUARTERLY
+}
+
+enum PaymentStatus {
+  CREATED
+  SUCCEEDED
+  FAILED
+}
+
+model Visitor {
+  id            String              @id @default(uuid()) @db.Uuid
+  publicId      String              @unique @default(uuid()) @db.Uuid
+  sessions      AssessmentSession[]
+  subscriptions Subscription[]
+  paymentEvents PaymentEvent[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+}
+
+model AssessmentSession {
+  id          String             @id @default(uuid()) @db.Uuid
+  visitorId   String             @db.Uuid
+  visitor     Visitor            @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  flow        String
+  ageRange    String?
+  currentStep Int                @default(0)
+  status      AssessmentStatus   @default(DRAFT)
+  version     Int                @default(0)
+  completedAt DateTime?
+  answers     AssessmentAnswer[]
+  profile     HealthProfile?
+  result      AssessmentResult?
+  payments    PaymentEvent[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([visitorId])
+  @@index([visitorId, status])
+}
+
+model AssessmentAnswer {
+  id        String            @id @default(uuid()) @db.Uuid
+  sessionId String            @db.Uuid
+  session   AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  stepKey   String
+  value     Json
+  revision  Int               @default(1)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@unique([sessionId, stepKey])
+}
+
+model HealthProfile {
+  id             String            @id @default(uuid()) @db.Uuid
+  sessionId      String            @unique @db.Uuid
+  session        AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sex            ProfileSex
+  age            Int
+  heightCm       Decimal           @db.Decimal(6, 2)
+  weightKg       Decimal           @db.Decimal(6, 2)
+  targetWeightKg Decimal           @db.Decimal(6, 2)
+  activityLevel  ActivityLevel
+  goal           HealthGoal
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model AssessmentResult {
+  id                  String            @id @default(uuid()) @db.Uuid
+  sessionId           String            @unique @db.Uuid
+  session             AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  bmi                 Decimal           @db.Decimal(6, 2)
+  bmiCategory         String
+  bmr                 Decimal           @db.Decimal(8, 2)
+  tdee                Decimal           @db.Decimal(8, 2)
+  recommendedCalories Int
+  weeklyChangeKg      Decimal           @db.Decimal(5, 2)
+  targetDate          DateTime
+  predictionCurve     Json
+  algorithmVersion    String
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+}
+
+model Subscription {
+  id        String             @id @default(uuid()) @db.Uuid
+  visitorId String             @db.Uuid
+  visitor   Visitor            @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  status    SubscriptionStatus @default(INACTIVE)
+  plan      SubscriptionPlan   @default(MONTHLY)
+  startsAt  DateTime?
+  expiresAt DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([visitorId, status])
+}
+
+model PaymentEvent {
+  id             String            @id @default(uuid()) @db.Uuid
+  eventId        String            @unique @default(uuid()) @db.Uuid
+  visitorId      String            @db.Uuid
+  visitor        Visitor           @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  sessionId      String            @db.Uuid
+  session        AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  idempotencyKey String            @unique
+  type           String
+  status         PaymentStatus
+  payload        Json
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([visitorId])
+  @@index([sessionId])
+}

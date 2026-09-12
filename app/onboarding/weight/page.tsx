@@ -41,7 +41,7 @@ function WeightContent() {
     setSaving(true);
     setError("");
     try {
-      await saveExplicitPageState(sessionId, { stepKey: "weightKg", value: canonicalKg, nextStepKey: "weightDisplayUnit" });
+      await saveExplicitPageState(sessionId, { stepKey: "weightKg", value: canonicalKg, nextStepKey: "weightKg" });
       await saveExplicitPageState(sessionId, { stepKey: "weightDisplayUnit", value: unit, nextStepKey: "targetWeightKg" });
       router.push(appendFunnelQuery("/onboarding/target-weight", sessionId, flow, age));
     } catch (caught) {

@@ -36,9 +36,26 @@ describe("healthProfileSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("accepts the observed height range boundaries", () => {
-    expect(healthProfileSchema.safeParse({ ...validProfile, heightCm: 90 }).success).toBe(true);
-    expect(healthProfileSchema.safeParse({ ...validProfile, heightCm: 243 }).success).toBe(true);
+  it("accepts the observed 90 cm lower height boundary with a supported BMI combination", () => {
+    expect(
+      healthProfileSchema.safeParse({
+        ...validProfile,
+        heightCm: 90,
+        weightKg: 40,
+        targetWeightKg: 35,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts the observed 243 cm upper height boundary with a supported BMI combination", () => {
+    expect(
+      healthProfileSchema.safeParse({
+        ...validProfile,
+        heightCm: 243,
+        weightKg: 110,
+        targetWeightKg: 100,
+      }).success,
+    ).toBe(true);
   });
 
   it("rejects a target weight that produces an implausibly low BMI", () => {

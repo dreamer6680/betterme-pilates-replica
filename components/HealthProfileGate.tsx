@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import OnboardingQuestionnaire from "@/components/OnboardingQuestionnaire";
 import { getSessionStorageKey, ONBOARDING_STEPS, type AnswerMap } from "@/lib/onboarding";
@@ -32,6 +33,8 @@ const HEALTH_FIELDS: readonly HealthField[] = [
   "weightKg",
   "targetWeightKg",
 ];
+
+const GENERATION_STEP_INDEX = ONBOARDING_STEPS.findIndex((step) => step.id === "generation");
 
 const NUMBER_COPY: Record<Exclude<HealthField, "sex">, { title: string; subtitle: string; unit: string; min: number; max: number }> = {
   age: {
@@ -71,6 +74,7 @@ function isSessionSnapshot(value: unknown): value is SessionSnapshot {
       "id" in value &&
       "version" in value &&
       "currentStep" in value &&
+      "status" in value &&
       "answers" in value,
   );
 }
@@ -125,6 +129,7 @@ function prepareQuestionnaireRestore(order: string, snapshot: SessionSnapshot) {
 }
 
 export default function HealthProfileGate({ flow, order, age }: HealthProfileGateProps) {
+  const router = useRouter();
   const [snapshot, setSnapshot] = useState<SessionSnapshot | null>(null);
   const [field, setField] = useState<HealthField | null>(null);
   const [numberValue, setNumberValue] = useState("");
@@ -145,6 +150,11 @@ export default function HealthProfileGate({ flow, order, age }: HealthProfileGat
         throw new Error("We couldn’t restore your assessment session.");
       }
 
+      if (payload.status === "COMPLETED") {
+        router.replace(`/results/${encodeURIComponent(order)}`);
+        return;
+      }
+
       const nextField = getNextHealthField(payload.answers);
       setSnapshot(payload);
       setField(nextField);
@@ -157,11 +167,67 @@ export default function HealthProfileGate({ flow, order, age }: HealthProfileGat
     } finally {
       setIsLoading(false);
     }
-  }, [order]);
+  }, [order, router]);
 
   useEffect(() => {
     void loadSession();
   }, [loadSession]);
+
+  useEffect(() => {
+    if (field !== null || !snapshot || snapshot.status !== "DRAFT") return;
+
+    let stopped = false;
+    let completing = false;
+
+    const checkForCompletion = async () => {
+      if (stopped || completing) return;
+
+      try {
+        const sessionResponse = await fetch(`/api/v1/sessions/${encodeURIComponent(order)}`, {
+          cache: "no-store",
+        });
+        const sessionPayload: unknown = await sessionResponse.json();
+
+        if (!sessionResponse.ok || !isSessionSnapshot(sessionPayload)) return;
+
+        if (sessionPayload.status === "COMPLETED") {
+          router.replace(`/results/${encodeURIComponent(order)}`);
+          return;
+        }
+
+        if (GENERATION_STEP_INDEX >= 0 && sessionPayload.currentStep >= GENERATION_STEP_INDEX) {
+          completing = true;
+          const completeResponse = await fetch(
+            `/api/v1/sessions/${encodeURIComponent(order)}/complete`,
+            { method: "POST" },
+          );
+
+          if (completeResponse.ok) {
+            router.replace(`/results/${encodeURIComponent(order)}`);
+            return;
+          }
+
+          const payload: unknown = await completeResponse.json();
+          const message =
+            payload && typeof payload === "object" && "message" in payload && typeof payload.message === "string"
+              ? payload.message
+              : "We couldn’t finalize your assessment.";
+          setError(message);
+          completing = false;
+        }
+      } catch {
+        completing = false;
+      }
+    };
+
+    const intervalId = window.setInterval(() => void checkForCompletion(), 700);
+    void checkForCompletion();
+
+    return () => {
+      stopped = true;
+      window.clearInterval(intervalId);
+    };
+  }, [field, order, router, snapshot]);
 
   const numericCopy = useMemo(() => {
     if (!field || field === "sex") return null;
@@ -250,7 +316,12 @@ export default function HealthProfileGate({ flow, order, age }: HealthProfileGat
   }
 
   if (!field) {
-    return <OnboardingQuestionnaire flow={flow} order={order} age={age} />;
+    return (
+      <>
+        <OnboardingQuestionnaire flow={flow} order={order} age={age} />
+        {error ? <div className={styles.floatingError} role="alert">{error}</div> : null}
+      </>
+    );
   }
 
   const completed = HEALTH_FIELDS.filter((item) => snapshot.answers[item] !== undefined).length;

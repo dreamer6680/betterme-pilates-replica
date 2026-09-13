@@ -56,7 +56,7 @@ describe("browser-observed early funnel sequence", () => {
     expect(existsSync(absolute), `${file} should exist`).toBe(true);
     const page = source(file);
     expect(page).toContain(href);
-    expect(page).toContain(`nextStepKey=\"${stepKey}\"`);
+    expect(page).toContain(`nextStepKey="${stepKey}"`);
   });
 
   it("does not expose implementation/reference caveats inside product pages", () => {
@@ -84,7 +84,7 @@ describe("browser-observed early funnel sequence", () => {
       "targetZones",
       "zoneInsight",
     ]) {
-      expect(registry).toContain(`\"${stepKey}\"`);
+      expect(registry).toContain(`"${stepKey}"`);
     }
 
     expect(registry).toContain("LEGACY_RECOVERY_STEP_ALIASES");

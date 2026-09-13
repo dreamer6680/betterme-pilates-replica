@@ -7,16 +7,17 @@ type Props = { searchParams: FunnelSearchParams };
 
 export default async function PhysicalBuildPage({ searchParams }: Props) {
   const { sessionId, flow, age } = await readFunnelQuery(searchParams);
+
   return (
-    <FunnelPage section="My Profile" step="physicalBuild" backHref={buildFunnelHref("/onboarding/intro", sessionId, flow, age)}>
-      <span className={styles.kicker}>About you · adapted early step</span>
-      <h1>How would you describe your physical build?</h1>
+    <FunnelPage section="My Profile" step="physicalBuild" backHref={buildFunnelHref("/onboarding/additional-goals", sessionId, flow, age)}>
+      <span className={styles.kicker}>Current body</span>
+      <h1>How would you describe your current body?</h1>
       <p>Choose the option that feels closest right now.</p>
       <div className={styles.choices}>
-        <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="physicalBuild" value="slim" nextStepKey="goal" nextHref="/onboarding/goal">Slim</SaveChoiceButton>
-        <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="physicalBuild" value="mid-sized" nextStepKey="goal" nextHref="/onboarding/goal">Mid-sized</SaveChoiceButton>
-        <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="physicalBuild" value="plus-sized" nextStepKey="goal" nextHref="/onboarding/goal">Plus-sized</SaveChoiceButton>
-        <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="physicalBuild" value="significantly-overweight" nextStepKey="goal" nextHref="/onboarding/goal">Significantly overweight</SaveChoiceButton>
+        <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="physicalBuild" value="slim" nextStepKey="dreamBody" nextHref="/onboarding/dream-body">Slim</SaveChoiceButton>
+        <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="physicalBuild" value="mid-sized" nextStepKey="dreamBody" nextHref="/onboarding/dream-body">Mid-sized</SaveChoiceButton>
+        <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="physicalBuild" value="plus-sized" nextStepKey="dreamBody" nextHref="/onboarding/dream-body">Plus-sized</SaveChoiceButton>
+        <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="physicalBuild" value="significantly-overweight" nextStepKey="dreamBody" nextHref="/onboarding/dream-body">Significantly overweight</SaveChoiceButton>
       </div>
     </FunnelPage>
   );

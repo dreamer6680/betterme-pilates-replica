@@ -1,6 +1,6 @@
 import FunnelPage from "@/components/funnel/FunnelPage";
 import SaveChoiceButton from "@/components/funnel/SaveChoiceButton";
-import { readFunnelQuery, type FunnelSearchParams } from "@/components/funnel/query";
+import { buildFunnelHref, readFunnelQuery, type FunnelSearchParams } from "@/components/funnel/query";
 import styles from "@/components/funnel/funnel.module.css";
 
 type Props = { searchParams: FunnelSearchParams };
@@ -9,7 +9,7 @@ export default async function StairsPage({ searchParams }: Props) {
   const { sessionId, flow, age } = await readFunnelQuery(searchParams);
 
   return (
-    <FunnelPage section="Activity" step="stairs">
+    <FunnelPage section="Activity" step="stairs" backHref={buildFunnelHref("/onboarding/zone-insight", sessionId, flow, age)}>
       <span className={styles.kicker}>Activity</span>
       <h1>Do you lose your breath when taking the stairs?</h1>
       <div className={styles.choices}>

@@ -7,16 +7,15 @@ type Props = { searchParams: FunnelSearchParams };
 
 export default async function GoalPage({ searchParams }: Props) {
   const { sessionId, flow, age } = await readFunnelQuery(searchParams);
+
   return (
-    <FunnelPage section="My Profile" step="goal" backHref={buildFunnelHref("/onboarding/physical-build", sessionId, flow, age)}>
-      <span className={styles.kicker}>Your goal · adapted early step</span>
-      <h1>What would you most like Pilates to help you achieve?</h1>
-      <p>The supplied reference notes say the early main-goal branches were not fully traversed, so this assignment-required version is explicitly marked adapted.</p>
+    <FunnelPage section="My Profile" step="goal" backHref={buildFunnelHref("/onboarding/home-pilates-intro", sessionId, flow, age)}>
+      <span className={styles.kicker}>Your goal</span>
+      <h1>{"What's your main goal?"}</h1>
+      <p>Choose the result you want the plan preview to prioritize.</p>
       <div className={styles.choices}>
-        <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="goal" value="get-toned" nextStepKey="exerciseFrequency" nextHref="/onboarding/exercise-frequency">Tone and define</SaveChoiceButton>
-        <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="goal" value="lose-weight" nextStepKey="exerciseFrequency" nextHref="/onboarding/exercise-frequency">Support weight management</SaveChoiceButton>
-        <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="goal" value="improve-posture" nextStepKey="exerciseFrequency" nextHref="/onboarding/exercise-frequency">Improve posture</SaveChoiceButton>
-        <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="goal" value="feel-stronger" nextStepKey="exerciseFrequency" nextHref="/onboarding/exercise-frequency">Feel stronger</SaveChoiceButton>
+        <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="goal" value="lose-weight" nextStepKey="goalInsight" nextHref="/onboarding/goal-insight">Lose weight</SaveChoiceButton>
+        <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="goal" value="get-toned" nextStepKey="goalInsight" nextHref="/onboarding/goal-insight">Maintain weight and get fit</SaveChoiceButton>
       </div>
     </FunnelPage>
   );

@@ -8,10 +8,36 @@ test("walks the explicit route funnel, restores from backend, and unlocks via mo
   await expect(page).toHaveURL(/\/onboarding\/intro\?/);
 
   await page.getByRole("button", { name: "CONTINUE" }).click();
+  await expect(page).toHaveURL(/\/onboarding\/pilates-experience\?/);
+  await page.getByRole("button", { name: "Yes" }).click();
+  await expect(page).toHaveURL(/\/onboarding\/home-pilates-intro\?/);
+  await page.getByRole("button", { name: "CONTINUE" }).click();
+
+  await expect(page).toHaveURL(/\/onboarding\/goal\?/);
+  await page.getByRole("button", { name: "Lose weight" }).click();
+  await expect(page).toHaveURL(/\/onboarding\/goal-insight\?/);
+  await page.getByRole("button", { name: "CONTINUE" }).click();
+
+  await expect(page).toHaveURL(/\/onboarding\/additional-goals\?/);
+  await page.getByRole("button", { name: "Improve my posture" }).click();
+  await page.getByRole("button", { name: "NEXT", exact: true }).click();
+
   await expect(page).toHaveURL(/\/onboarding\/physical-build\?/);
   await page.getByRole("button", { name: "Mid-sized" }).click();
-  await page.getByRole("button", { name: "Support weight management" }).click();
+  await page.getByRole("button", { name: /Toned/ }).click();
+  await page.getByRole("button", { name: "I gain and lose weight easily" }).click();
+
+  await expect(page).toHaveURL(/\/onboarding\/short-workouts\?/);
+  await page.getByRole("button", { name: "CONTINUE" }).click();
+  await page.getByRole("button", { name: "1–2 years ago" }).click();
+  await page.getByRole("button", { name: "Pretty flexible" }).click();
   await page.getByRole("button", { name: "Several times a week" }).click();
+
+  await expect(page).toHaveURL(/\/onboarding\/target-zones\?/);
+  await page.getByRole("button", { name: "Belly" }).click();
+  await page.getByRole("button", { name: "NEXT", exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding\/zone-insight\?/);
+  await page.getByRole("button", { name: "CONTINUE" }).click();
 
   await expect(page).toHaveURL(/\/onboarding\/stairs\?/);
   await page.getByRole("button", { name: "Slightly, I still can talk" }).click();
@@ -60,7 +86,7 @@ test("walks the explicit route funnel, restores from backend, and unlocks via mo
   await expect(page.getByText("26", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "CONTINUE" }).click();
 
-  await page.getByRole("spinbutton", { name: "Goal weight in KG" }).fill("62");
+  await page.getByRole("spinbutton", { name: "Goal weight in KG" }).fill("65");
   await page.getByRole("button", { name: "CONTINUE" }).click();
 
   await page.getByRole("spinbutton", { name: "Age in years" }).fill("30");

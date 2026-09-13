@@ -66,9 +66,11 @@ describe("browser-observed early funnel sequence", () => {
     }
   });
 
-  it("keeps recovery routing and state validation aware of all early screen keys", () => {
+  it("uses one recovery registry and validates persisted state keys against it", () => {
+    const registry = source("lib/funnel/steps.ts");
     const onboarding = source("app/onboarding/page.tsx");
     const service = source("lib/assessment/session-service.ts");
+
     for (const stepKey of [
       "pilatesExperience",
       "homePilatesIntro",
@@ -82,8 +84,11 @@ describe("browser-observed early funnel sequence", () => {
       "targetZones",
       "zoneInsight",
     ]) {
-      expect(onboarding).toContain(`case \"${stepKey}\"`);
+      expect(registry).toContain(`\"${stepKey}\"`);
     }
+
+    expect(registry).toContain("LEGACY_RECOVERY_STEP_ALIASES");
+    expect(onboarding).toContain("pathForFunnelStep");
     expect(service).toContain("funnelStepKeySchema");
     expect(service).toContain("pageStateKeySchema");
   });

@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const OBSERVED_PAGES = [
+  ["app/onboarding/pilates-experience/page.tsx", "Have you tried Pilates workouts before?"],
   ["app/onboarding/stairs/page.tsx", "Do you lose your breath when taking the stairs?"],
   ["app/onboarding/limitations/page.tsx", "Do you struggle with any of the following?"],
   ["app/onboarding/walking-frequency/page.tsx", "How often do you go for walks?"],

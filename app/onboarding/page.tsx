@@ -24,7 +24,10 @@ function firstString(value: string | string[] | undefined): string {
 function pathForStep(stepKey: string | null): string {
   switch (stepKey) {
     case "physicalBuild": return "/onboarding/physical-build";
+    case "pilatesExperience": return "/onboarding/pilates-experience";
     case "goal": return "/onboarding/goal";
+    case "goalEncouragement": return "/onboarding/goal-encouragement";
+    case "secondaryGoals": return "/onboarding/secondary-goals";
     case "exerciseFrequency": return "/onboarding/exercise-frequency";
     case "stairs": return "/onboarding/stairs";
     case "limitations": return "/onboarding/limitations";

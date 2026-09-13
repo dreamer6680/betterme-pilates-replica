@@ -1,9 +1,9 @@
-import MainGoalStep from "@/components/funnel/MainGoalStep";
+import GoalEncouragementStep from "@/components/funnel/GoalEncouragementStep";
 import { readFunnelQuery, type FunnelSearchParams } from "@/components/funnel/query";
 
 type Props = { searchParams: FunnelSearchParams };
 
-export default async function GoalPage({ searchParams }: Props) {
+export default async function GoalEncouragementPage({ searchParams }: Props) {
   const params = await searchParams;
   const { sessionId, flow, age } = await readFunnelQuery(Promise.resolve(params));
   const query = new URLSearchParams();
@@ -14,6 +14,11 @@ export default async function GoalPage({ searchParams }: Props) {
   }
 
   return (
-    <MainGoalStep sessionId={sessionId} flow={flow} age={age} queryString={query.toString()} />
+    <GoalEncouragementStep
+      sessionId={sessionId}
+      flow={flow}
+      age={age}
+      queryString={query.toString()}
+    />
   );
 }

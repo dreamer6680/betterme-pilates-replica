@@ -8,9 +8,24 @@ test("walks the explicit route funnel, restores from backend, and unlocks via mo
   await expect(page).toHaveURL(/\/onboarding\/intro\?/);
 
   await page.getByRole("button", { name: "CONTINUE" }).click();
+  await expect(page).toHaveURL(/\/onboarding\/pilates-experience\?/);
+  await page.getByRole("radio", { name: "Yes" }).click();
+  await expect(page.getByRole("heading", { name: "You're going to crush this!" })).toBeVisible();
+  await page.getByRole("button", { name: "CONTINUE" }).click();
+  await expect(page).toHaveURL(/\/onboarding\/goal\?/);
+  await expect(page.getByRole("link", { name: "Go back" })).toHaveAttribute(
+    "href",
+    /\/onboarding\/pilates-experience\?/,
+  );
+  await page.getByRole("radio", { name: "Lose weight" }).click();
+  await expect(page).toHaveURL(/\/onboarding\/goal-encouragement\?/);
+  await expect(page.getByRole("heading", { name: "We know how to make that happen!" })).toBeVisible();
+  await page.getByRole("button", { name: "CONTINUE" }).click();
+  await expect(page).toHaveURL(/\/onboarding\/secondary-goals\?/);
+  await page.getByRole("option", { name: "Build muscle strength" }).click();
+  await page.getByRole("button", { name: "NEXT STEP" }).click();
   await expect(page).toHaveURL(/\/onboarding\/physical-build\?/);
   await page.getByRole("button", { name: "Mid-sized" }).click();
-  await page.getByRole("button", { name: "Support weight management" }).click();
   await page.getByRole("button", { name: "Several times a week" }).click();
 
   await expect(page).toHaveURL(/\/onboarding\/stairs\?/);

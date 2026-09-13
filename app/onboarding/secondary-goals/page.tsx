@@ -1,9 +1,9 @@
-import MainGoalStep from "@/components/funnel/MainGoalStep";
+import SecondaryGoalsStep from "@/components/funnel/SecondaryGoalsStep";
 import { readFunnelQuery, type FunnelSearchParams } from "@/components/funnel/query";
 
 type Props = { searchParams: FunnelSearchParams };
 
-export default async function GoalPage({ searchParams }: Props) {
+export default async function SecondaryGoalsPage({ searchParams }: Props) {
   const params = await searchParams;
   const { sessionId, flow, age } = await readFunnelQuery(Promise.resolve(params));
   const query = new URLSearchParams();
@@ -13,7 +13,5 @@ export default async function GoalPage({ searchParams }: Props) {
     else if (value !== undefined) query.set(key, value);
   }
 
-  return (
-    <MainGoalStep sessionId={sessionId} flow={flow} age={age} queryString={query.toString()} />
-  );
+  return <SecondaryGoalsStep sessionId={sessionId} flow={flow} age={age} queryString={query.toString()} />;
 }

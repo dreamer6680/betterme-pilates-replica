@@ -14,7 +14,7 @@ export default async function IntroPage({ searchParams }: Props) {
       <p>A few quick questions will help shape your plan preview.</p>
       <div className={styles.panel}><p>Your answers personalize workout focus, weekly rhythm and session length. This independent replica does not send your answers to BetterMe.</p></div>
       <p className={styles.note}>Early states 1–15 were not fully supplied in the observed reference inventory; this page is retained as an explicit adaptation rather than claimed as verified fidelity.</p>
-      <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="intro" value={true} nextStepKey="physicalBuild" nextHref="/onboarding/physical-build" variant="primary">CONTINUE</SaveChoiceButton>
+      <SaveChoiceButton sessionId={sessionId} flow={flow} age={age} stepKey="intro" value={true} nextStepKey="pilatesExperience" nextHref="/onboarding/pilates-experience" variant="primary">CONTINUE</SaveChoiceButton>
     </FunnelPage>
   );
 }
